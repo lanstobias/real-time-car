@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "controlling-motors", "controlling-motors\controlling-motors.vcxproj", "{0CD8808F-572F-4771-9B90-87C34DE2E8C0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "car-implementation", "car-implementation\car-implementation.vcxproj", "{55A8CCA4-C046-4BAB-8E11-D7F853CBF239}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|VisualGDB = Debug|VisualGDB
+		Release|VisualGDB = Release|VisualGDB
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0CD8808F-572F-4771-9B90-87C34DE2E8C0}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{0CD8808F-572F-4771-9B90-87C34DE2E8C0}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{0CD8808F-572F-4771-9B90-87C34DE2E8C0}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{0CD8808F-572F-4771-9B90-87C34DE2E8C0}.Release|VisualGDB.Build.0 = Release|VisualGDB
+		{55A8CCA4-C046-4BAB-8E11-D7F853CBF239}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{55A8CCA4-C046-4BAB-8E11-D7F853CBF239}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{55A8CCA4-C046-4BAB-8E11-D7F853CBF239}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{55A8CCA4-C046-4BAB-8E11-D7F853CBF239}.Release|VisualGDB.Build.0 = Release|VisualGDB
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9EDF05CD-EA2F-4A82-9BDB-22DE7968A8E4}
+	EndGlobalSection
+EndGlobal
