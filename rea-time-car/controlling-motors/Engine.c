@@ -17,5 +17,7 @@ void engineRun(Engine* engine, int speed, Direction direction)
 
 void engineDestroy(Engine* engine)
 {
-	
+	destroy(engine->forwardPin);
+	destroy(engine->reversePin);
+	pwmDestroy(engine->speedPin);
 }
