@@ -12,12 +12,10 @@ typedef enum Direction
 
 typedef struct Engine
 {
-	enum Pin speedPin;
-	enum Pin forwardPin;
-	enum Pin reversePin;
+	PWM speedPin;
+	GPIO forwardPin;
+	GPIO reversePin;
 	Direction direction;
-	PWM pwm;
-	GPIO* basePio;
 }Engine;
 
 void engineInit(Engine* engine, enum Pin speedPin, enum Pin forwardPin, enum Pin reversePin);
