@@ -1,9 +1,8 @@
 #ifndef ENGINE_H
 #define ENGINE_H
-#include "piodirect.h"
-#include "pwm.h"
-#include "Button.h"
-#include "Led.h"
+#include "../piodirect.h"
+#include "../pwm.h"
+#include "../Led.h"
 
 typedef enum Direction
 {
