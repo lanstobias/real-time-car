@@ -30,9 +30,27 @@
     <ClCompile Include="Engine.c">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Led.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\piodirect.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\pwm.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Led.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\piodirect.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pwm.h">
       <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>
