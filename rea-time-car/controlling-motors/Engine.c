@@ -4,3 +4,8 @@ void engineInit(Engine* engine, enum Pin speedPin, enum Pin forwardPin, enum Pin
 {
 	
 }
+
+void engineDestroy(Engine* engine)
+{
+	
+}
