@@ -16,7 +16,7 @@ void engineRun(Engine* engine, int speed, Direction direction)
 		onOff(engine->forwardPin, ON);
 		onOff(engine->reversePin, OFF);
 	}
-	else if (direction == Reverse)
+	else
 	{
 		onOff(engine->forwardPin, OFF);
 		onOff(engine->reversePin, ON);

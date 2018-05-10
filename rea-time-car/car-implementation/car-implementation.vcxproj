@@ -47,14 +47,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Button.h" />
     <ClInclude Include="Car.h" />
+    <ClInclude Include="Engine.h" />
+    <ClInclude Include="Led.h" />
+    <ClInclude Include="piodirect.h" />
+    <ClInclude Include="pwm.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
+    <ClCompile Include="Button.c" />
     <ClCompile Include="car-implementation.c" />
     <ClCompile Include="Car.c" />
+    <ClCompile Include="Engine.c" />
+    <ClCompile Include="Led.c" />
+    <ClCompile Include="piodirect.c" />
+    <ClCompile Include="pwm.c" />
     <None Include="car-implementation-Debug.vgdbsettings" />
     <None Include="car-implementation-Release.vgdbsettings" />
   </ItemGroup>
