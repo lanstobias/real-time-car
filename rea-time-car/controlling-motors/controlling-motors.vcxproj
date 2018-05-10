@@ -47,20 +47,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Led.h" />
-    <ClInclude Include="..\piodirect.h" />
-    <ClInclude Include="..\pwm.h" />
     <ClInclude Include="Engine.h" />
+    <ClInclude Include="Led.h" />
+    <ClInclude Include="piodirect.h" />
+    <ClInclude Include="pwm.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
-    <ClCompile Include="..\Led.c" />
-    <ClCompile Include="..\piodirect.c" />
-    <ClCompile Include="..\pwm.c" />
     <ClCompile Include="controlling-motors.c" />
     <ClCompile Include="Engine.c" />
+    <ClCompile Include="Led.c" />
+    <ClCompile Include="piodirect.c" />
+    <ClCompile Include="pwm.c" />
     <None Include="controlling-motors-Debug.vgdbsettings" />
     <None Include="controlling-motors-Release.vgdbsettings" />
   </ItemGroup>

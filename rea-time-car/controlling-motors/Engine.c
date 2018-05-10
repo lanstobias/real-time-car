@@ -11,8 +11,16 @@ void engineRun(Engine* engine, int speed, Direction direction)
 {
 	pwmPulse(engine->speedPin, speed);
 
-	onOff(engine->forwardPin, OFF);
-	onOff(engine->reversePin, ON);
+	if (direction == Forward)
+	{
+		onOff(engine->forwardPin, ON);
+		onOff(engine->reversePin, OFF);
+	}
+	else if (direction == Reverse)
+	{
+		onOff(engine->forwardPin, OFF);
+		onOff(engine->reversePin, ON);
+	}
 }
 
 void engineDestroy(Engine* engine)
