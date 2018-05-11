@@ -4,6 +4,13 @@
 #include "piodirect.h"
 #include "pwm.h"
 
+typedef enum CarDirection
+{
+	CarForward,
+	CarReverse,
+	CarLeft,
+	CarRight
+}CarDirection;
 typedef enum GearState
 {
 	Neutral, 
@@ -21,12 +28,18 @@ typedef struct Car
 	Engine engineRight;
 	GearState gearState;
 	int speed;
+	CarDirection carDirection;
+	
 }Car;
 
 void carInit(Car* car);
 void implementEngines(Car* car);
-void carRun(Car* car, int speed, Direction direction);
+void carRun(Car* car);
 void carDestroy(Car* car);
 void carStop(Car* car);
+void carSetSpeed(Car* car, int speed);
+void carSetEnginesToCarDirection(Car* car);
+void carSetEnginesSpeed(Car* car);
+void incrementGear(Car* car);
 #endif
 

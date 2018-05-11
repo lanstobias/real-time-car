@@ -16,10 +16,13 @@ typedef struct Engine
 	GPIO forwardPin;
 	GPIO reversePin;
 	Direction direction;
+	int speed;
 }Engine;
 
 void engineInit(Engine* engine, enum Pin speedPin, enum Pin forwardPin, enum Pin reversePin);
 void engineDestroy(Engine* engine);
-void engineRun(Engine* engine, int speed, Direction direction);
+void engineRun(Engine* engine);
+void engineSetDirection(Engine* engine, Direction direction);
+void engineSetSpeed(Engine* engine, int speed);
 
 #endif // !ENGINE_H

@@ -7,11 +7,11 @@ void engineInit(Engine* engine, enum Pin speedPin, enum Pin forwardPin, enum Pin
 	engine->speedPin = pwmCreate(speedPin, 100);
 }
 
-void engineRun(Engine* engine, int speed, Direction direction)
+void engineRun(Engine* engine)
 {
-	pwmPulse(engine->speedPin, speed);
+	pwmPulse(engine->speedPin, engine->speed);
 
-	if (direction == Forward)
+	if (engine->direction == Forward)
 	{
 		onOff(engine->forwardPin, ON);
 		onOff(engine->reversePin, OFF);
@@ -28,4 +28,14 @@ void engineDestroy(Engine* engine)
 	destroy(engine->forwardPin);
 	destroy(engine->reversePin);
 	pwmDestroy(engine->speedPin);
+}
+
+void engineSetDirection(Engine* engine, Direction direction)
+{
+	engine->direction = direction;
+}
+void engineSetSpeed(Engine* engine, int speed)
+{
+	if (speed>=0 && speed<=100)
+		engine->speed = speed;
 }
