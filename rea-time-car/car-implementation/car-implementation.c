@@ -6,12 +6,16 @@
 #include "Button.h"
 #include "Led.h"
 
-//Trådar
+// Function prototypes
+double degreeToRadian(double degreeValue);
+double sinValueToPercent(double sinValue);
+
+// Threads
 pthread_t carThread;
 pthread_t ledThread;
 pthread_t readButtonThread;
 
-//Variabler
+// Variables
 Car volvo;
 Button stopButton, turnLeftButton, turnRightButton, gearButton;
 Led stopLed, turnLeftLed, turnRightLed, greenLed;
@@ -63,6 +67,9 @@ void* ledTask(void* args)
 	struct timespec waitTimeSpec, remainingWaitTime;
 	waitTimeSpec.tv_nsec = 1000000;
 	blinkTimeSpec.tv_nsec = 500000000;
+	
+	int degree = 0;
+
 	while (1)
 	{
 		switch (volvo.gearState)
@@ -72,6 +79,10 @@ void* ledTask(void* args)
 				ledTurnOff(&stopLed);
 				ledTurnOff(&turnLeftLed);
 				ledTurnOff(&turnRightLed);
+				
+				sinValue = sin(degreeToRadian(degree++));
+				pwmPulse(greenLed, sinValueToPercent(sinValue));
+
 				break;
 		case (gs25):
 				blinkTimeSpec.tv_nsec = 500000000;
@@ -143,4 +154,14 @@ int main(int argc, char *argv[])
 	
 	fflush(stdout); /* <============== Put a breakpoint here */
 	return 0;
+}
+
+double degreeToRadian(double degreeValue)
+{
+	return (degreeValue * (M_PI / 180));
+}
+
+double sinValueToPercent(double sinValue)
+{
+	return (fabs(sinValue * 100));
 }
