@@ -36,6 +36,8 @@ void carInit(Car* car);
 void implementEngines(Car* car);
 void carRun(Car* car);
 void carDestroy(Car* car);
+void carSetReverse(Car* car);
+void carSetForward(Car* car);
 void carStop(Car* car);
 void carSetSpeed(Car* car, int speed);
 void carSetEnginesToCarDirection(Car* car);

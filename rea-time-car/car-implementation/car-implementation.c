@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <math.h>
 #include "Car.h"
 #include "Button.h"
 #include "Led.h"
@@ -38,16 +39,18 @@ void* carTask(void* args)
 void* readButtonTask(void* args)
 {
 	struct timespec blinkTimeSpec, remainingTime;
-	blinkTimeSpec.tv_nsec = 10000000;
+	blinkTimeSpec.tv_nsec = 100000000;
 	while (1)
 	{
 		if (buttonPositiveFlancDetection(&stopButton))
 		{
+			//if (volvo.gearState == Stop)
+				//terminate();
 			volvo.gearState = Stop;
 		}
 		if (buttonPositiveFlancDetection(&turnLeftButton))
 		{
-			//sendEventToQueue("turn left button pressed");
+			carSetReverse(&volvo);
 		}
 		if (buttonPositiveFlancDetection(&turnRightButton))
 		{
@@ -68,49 +71,61 @@ void* ledTask(void* args)
 	waitTimeSpec.tv_nsec = 1000000;
 	blinkTimeSpec.tv_nsec = 500000000;
 	
-	int degree = 0;
+	double degree = 0;
+	double sinValue;
 
 	while (1)
 	{
 		switch (volvo.gearState)
 		{
 		case (Neutral):
-				ledTurnOn(&greenLed);
-				ledTurnOff(&stopLed);
-				ledTurnOff(&turnLeftLed);
-				ledTurnOff(&turnRightLed);
+			ledTurnOff(&stopLed);
+			ledTurnOff(&turnLeftLed);
+			ledTurnOff(&turnRightLed);
 				
-				sinValue = sin(degreeToRadian(degree++));
-				pwmPulse(greenLed, sinValueToPercent(sinValue));
+			sinValue = sin(degreeToRadian(degree++));
+			pwmPulse(greenLed.pwm, sinValueToPercent(sinValue));
+			if (degree == 360)
+				degree = 0;
 
-				break;
+			break;
 		case (gs25):
-				blinkTimeSpec.tv_nsec = 500000000;
-				ledToggle(&greenLed);
-				clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
-				break;
+			ledTurnOff(&stopLed);
+			ledTurnOff(&turnLeftLed);
+			ledTurnOff(&turnRightLed);
+			blinkTimeSpec.tv_nsec = 250000000;
+			ledToggle(&greenLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
 		case (gs50):
-				blinkTimeSpec.tv_nsec = 250000000;
-				ledToggle(&greenLed);
-				clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
-				break;
+			blinkTimeSpec.tv_nsec = 125000000;
+			ledToggle(&greenLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
 		case (gs75):
-				blinkTimeSpec.tv_nsec = 100000000;
-				ledToggle(&greenLed);
-				clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
-				break;
+			blinkTimeSpec.tv_nsec = 50000000;
+			ledToggle(&greenLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
 		case (gs100):
-				blinkTimeSpec.tv_nsec = 50000000;
-				ledToggle(&greenLed);
-				clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
-				break;
+			blinkTimeSpec.tv_nsec = 25000000;
+			ledToggle(&greenLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
 		case (Stop):
-				ledTurnOff(&greenLed);
-				ledTurnOn(&stopLed);
-				break;
+			ledTurnOff(&turnLeftLed);
+			ledTurnOff(&turnRightLed);
+			ledTurnOff(&greenLed);
+			ledTurnOn(&stopLed);
+			break;
 		case (ReverseGear):
-				ledTurnOff(&greenLed);	
-				break;
+			ledTurnOff(&greenLed);	
+			ledTurnOff(&stopLed);
+			blinkTimeSpec.tv_nsec = 500000000;
+			ledToggle(&turnLeftLed);
+			ledToggle(&turnRightLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
 		}
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingWaitTime);
 	}
@@ -140,7 +155,7 @@ int main(int argc, char *argv[])
 
 
 	//Run
-	sleep(10);
+	sleep(20);
 	carDestroy(&volvo);
 	
 	//Deinit

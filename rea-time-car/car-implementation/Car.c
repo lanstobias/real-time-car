@@ -19,10 +19,17 @@ void carRun(Car* car)
 	engineRun(&(car->engineRight));
 }
 
+void carSetForward(Car* car)
+{
+	car->carDirection = CarForward;
+	carSetEnginesToCarDirection(car);
+}
 void carSetReverse(Car* car)
 {
 	car->carDirection = CarReverse;
+	car->gearState = ReverseGear;
 	carSetEnginesToCarDirection(car);
+	carSetSpeed(car, 25);
 }
 
 void carSetEnginesToCarDirection(Car* car)
@@ -73,6 +80,7 @@ void incrementGear(Car* car)
 	case (Neutral):
 		car->gearState = gs25;
 		carSetSpeed(car, 25);
+		carSetForward(car);
 		break;
 
 	case (gs25):
@@ -98,11 +106,13 @@ void incrementGear(Car* car)
 	case (ReverseGear):
 		car->gearState = gs25;
 		carSetSpeed(car, 25);
+		carSetForward(car);
 		break;
 
 	default:
 		car->gearState = Neutral;
 		carSetSpeed(car, 0);
+		carSetForward(car);
 		break;
 	}
 }
