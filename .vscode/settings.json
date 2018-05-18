@@ -1,0 +1,13 @@
+{
+  "files.exclude": {
+    "__error": "Not found",
+    "rea-time-car/.vs": true,
+    "rea-time-car/car-implementation/car-implementation-Debug.vgdbsettings": true,
+    "rea-time-car/car-implementation/car-implementation-Release.vgdbsettings": true,
+    "rea-time-car/car-implementation/car-implementation.vcxproj": true,
+    "rea-time-car/car-implementation/car-implementation.vcxproj.filters": true,
+    "rea-time-car/VisualGDB": true,
+    "rea-time-car/real-time-car.sln": true,
+    "rea-time-car/car-implementation/VisualGDB": true
+  }
+}
