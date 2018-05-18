@@ -117,7 +117,9 @@ void* ledTask(void* args)
 			ledTurnOff(&turnLeftLed);
 			ledTurnOff(&turnRightLed);
 			ledTurnOff(&greenLed);
-			ledTurnOn(&stopLed);
+			blinkTimeSpec.tv_nsec = 500000000;
+			ledToggle(&stopLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 		case (ReverseGear):
 			ledTurnOff(&greenLed);	
