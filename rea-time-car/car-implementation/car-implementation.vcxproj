@@ -28,11 +28,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <GNUConfigurationType>Debug</GNUConfigurationType>
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r2</ToolchainVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
     <ToolchainID>com.visualgdb.raspberry_pi</ToolchainID>
-    <ToolchainVersion>6.3.0/7.12/r1</ToolchainVersion>
+    <ToolchainVersion>6.3.0/7.12/r2</ToolchainVersion>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
     <ClCompile>
@@ -53,6 +53,7 @@
     <ClInclude Include="Led.h" />
     <ClInclude Include="piodirect.h" />
     <ClInclude Include="pwm.h" />
+    <ClInclude Include="Queue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -65,6 +66,7 @@
     <ClCompile Include="Led.c" />
     <ClCompile Include="piodirect.c" />
     <ClCompile Include="pwm.c" />
+    <ClCompile Include="Queue.c" />
     <None Include="car-implementation-Debug.vgdbsettings" />
     <None Include="car-implementation-Release.vgdbsettings" />
   </ItemGroup>

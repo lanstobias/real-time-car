@@ -132,6 +132,12 @@ void queue_add(queue* self, int value)
     self->array[self->rear] = value;
 }
 
+void queueClearAndEnqueue(queue* self, int value)
+{
+	queueClear(self);
+	queueEnqueue(self, value);
+}
+
 void queueDestroy(queue* self)
 {
     free(self->array);

@@ -7,6 +7,11 @@
 #include "Button.h"
 #include "Led.h"
 #include "Car.h"
+#include "Queue.h"
+
+//Macros
+#define SECOND_IN_NANO 1000000000
+#define MS_IN_NANO (SECOND_IN_NANO/1000)
 
 // Function prototypes
 double degreeToRadian(double degreeValue);
@@ -16,31 +21,48 @@ double sinValueToPercent(double sinValue);
 pthread_t carThread;
 pthread_t ledThread;
 pthread_t readButtonThread;
+pthread_t commandThread;
 
 // Variables
 Car volvo;
 Button stopButton, turnLeftButton, turnRightButton, gearButton;
 Led stopLed, turnLeftLed, turnRightLed, greenLed;
+queue mainQueue;
+
+//Enum
+typedef enum QueueCommands
+{
+	GearCommand,
+	ReverseCommand,
+	TurnLeftCommand,
+	TurnRightCommand,
+	StopCommand
+} QueueCommands;
 
 void* carTask(void* args)
 {
+	struct timespec waitTimeSpec, remainingTime;
+	waitTimeSpec.tv_nsec = 0; //Wait-time är egentligen 10ms, detta händer i carRun och carStop
 	while (1)
 	{
 		if (volvo.gearState == Neutral || volvo.gearState == Stop)
 		{
+			waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
 			carStop(&volvo);
 		}
 		else
 		{
+			waitTimeSpec.tv_nsec = 0;
 			carRun(&volvo);
 		}
+	clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
 void* readButtonTask(void* args)
 {
-	struct timespec blinkTimeSpec, remainingTime;
-	blinkTimeSpec.tv_nsec = 100000000;
+	struct timespec waitTimeSpec, remainingTime;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
 	while (1)
 	{
 		if (buttonPositiveFlancDetection(&stopButton))
@@ -59,9 +81,9 @@ void* readButtonTask(void* args)
 		}
 		if (buttonPositiveFlancDetection(&gearButton))
 		{
-			incrementGear(&volvo);
+			queueEnqueue(&mainQueue, (int)GearCommand);
 		}
-		clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
@@ -69,8 +91,8 @@ void* ledTask(void* args)
 {
 	struct timespec blinkTimeSpec, remainingTime;
 	struct timespec waitTimeSpec, remainingWaitTime;
-	waitTimeSpec.tv_nsec = 1000000;
-	blinkTimeSpec.tv_nsec = 500000000;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
+	blinkTimeSpec.tv_nsec = SECOND_IN_NANO/2;
 	
 	double degree = 0;
 	double sinValue;
@@ -134,12 +156,43 @@ void* ledTask(void* args)
 	}
 }
 
+void* commandTask(void* args)
+{
+	struct timespec waitTimeSpec, remainingTime;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
+	while (1)
+	{
+		
+		if (!queueIsEmpty(&mainQueue))
+		{
+			switch (queueDequeue(&mainQueue))
+			{
+			case ((int)GearCommand):
+				incrementGear(&volvo);
+				break;
+			case (ReverseCommand):
+				break;
+			case (TurnLeftCommand):
+				break;
+			case (TurnRightCommand):
+				break;
+			case (StopCommand):
+				break;
+			default:
+				break;
+			}
+		}
+	clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
+	}
+}
+
 
 int main(int argc, char *argv[])
 {
 	//Init
 	gpioSetup();
 	
+	queueInit(&mainQueue, 50);
 	carInit(&volvo);
 	
 	buttonInit(&stopButton, _4);
@@ -151,21 +204,42 @@ int main(int argc, char *argv[])
 	ledInit(&turnLeftLed, _21);
 	ledInit(&turnRightLed, _13);
 	ledInit(&greenLed, _26);
-
+	
+	pthread_create(&commandThread, NULL, commandTask, NULL);
 	pthread_create(&carThread, NULL, carTask, NULL);
 	pthread_create(&readButtonThread, NULL, readButtonTask, NULL);
 	pthread_create(&ledThread, NULL, ledTask, NULL);
-
-
-	//Run
-	sleep(20);
-	carDestroy(&volvo);
 	
-	//Deinit
+	struct sched_param commandThreadParams, carThreadParams, readButtonThreadParams, ledThreadParams;
+	commandThreadParams.__sched_priority = 50;
+	carThreadParams.__sched_priority = 50;
+	readButtonThreadParams.__sched_priority = 50;
+	ledThreadParams.__sched_priority = 50;
+	pthread_setschedparam(commandThread, SCHED_FIFO, &commandThreadParams);
+	pthread_setschedparam(carThread, SCHED_FIFO, &carThreadParams);
+	pthread_setschedparam(readButtonThread, SCHED_FIFO, &readButtonThreadParams);
+	pthread_setschedparam(ledThread, SCHED_FIFO, &ledThreadParams);
+
+	queueEnqueue(&mainQueue, (int)GearCommand);
+	sleep(1);
+	queueEnqueue(&mainQueue, (int)GearCommand);
+	sleep(1);
+	queueEnqueue(&mainQueue, (int)GearCommand);
+	sleep(1);
+	queueEnqueue(&mainQueue, (int)GearCommand);
+	sleep(1);
+	//Run
+	sleep(2);
+	carDestroy(&volvo);
+	queueDestroy(&mainQueue);
+	
+	//
+	pthread_cancel(commandThread);
 	pthread_cancel(carThread);
 	pthread_cancel(readButtonThread);
 	pthread_cancel(ledThread);
 	
+	pthread_join(commandThread, NULL);
 	pthread_join(carThread, NULL);
 	pthread_join(readButtonThread, NULL);
 	pthread_join(ledThread, NULL);

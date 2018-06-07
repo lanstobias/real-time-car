@@ -33,6 +33,7 @@ int queueLast(queue* self);
 
 int queue_create(queue* self);
 void queue_add(queue* self, int value);
+void queueClearAndEnqueue(queue* self, int value);
 void queueDestroy(queue* self);
 
 #endif
