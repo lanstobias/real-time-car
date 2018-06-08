@@ -59,8 +59,9 @@ void carDestroy(Car* car)
 
 void carStop(Car* car)
 {
-	onOff(car->engineLeft.speedPin.pio, OFF);
-	onOff(car->engineRight.speedPin.pio, OFF);
+	car->gearState = Stop;
+	carSetSpeed(car, 0);
+	carSetForward(car);
 }
 
 void carSetSpeed(Car* car, int speed)
