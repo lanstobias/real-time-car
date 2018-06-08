@@ -4,7 +4,9 @@
 void carInit(Car* car)
 {
 	implementEngines(car);
-	carSetSpeed(car, 70);
+	car->gearState = Neutral;
+	carSetForward(car);
+	carSetSpeed(car, 0);
 }
 
 void implementEngines(Car* car)
