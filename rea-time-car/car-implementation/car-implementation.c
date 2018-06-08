@@ -20,7 +20,6 @@ double sinValueToPercent(double sinValue);
 pthread_t carThread;
 pthread_t ledThread;
 pthread_t readButtonThread;
-pthread_t gearThread;
 
 // Variables
 Car volvo;
@@ -29,48 +28,34 @@ Led stopLed, turnLeftLed, turnRightLed, greenLed;
 
 void* carTask(void* args)
 {
-	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = 0;
-
 	while (1)
 	{
-		if (volvo.gearState == Neutral || volvo.gearState == Stop)
-		{
-			waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
-			carStop(&volvo);
-		}
-		else
-		{
-			waitTimeSpec.tv_nsec = 0;
-			carRun(&volvo);
-		}
-
-		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
+		carRun(&volvo);
 	}
 }
 
 void* readButtonTask(void* args)
 {
 	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
 
 	while (1)
 	{
 		if (buttonPositiveFlancDetection(&stopButton))
 		{
-			volvo.gearState = Stop;
+
 		}
 		if (buttonPositiveFlancDetection(&turnLeftButton))
 		{
-			carSetReverse(&volvo);
+
 		}
 		if (buttonPositiveFlancDetection(&turnRightButton))
 		{
-			//sendEventToQueue("turn right button pressed");
+
 		}
 		if (buttonPositiveFlancDetection(&gearButton))
 		{
-			queueEnqueue(&mainQueue, (int)GearCommand);
+			incrementGear(&volvo);
 		}
 
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
@@ -155,16 +140,6 @@ void* ledTask(void* args)
 	}
 }
 
-void* gearTask(void* args)
-{
-	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
-
-	while (1)
-	{
-		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
-	}
-}
 
 int main(int argc, char *argv[])
 {
@@ -183,17 +158,15 @@ int main(int argc, char *argv[])
 	ledInit(&greenLed, _26);
 
 	// Create threads
-	pthread_create(&gearThread, NULL, gearThread, NULL);
 	pthread_create(&carThread, NULL, carTask, NULL);
 	pthread_create(&readButtonThread, NULL, readButtonTask, NULL);
 	pthread_create(&ledThread, NULL, ledTask, NULL);
-
-	struct sched_param gearThreadParams, carThreadParams, readButtonThreadParams, ledThreadParams;
-	gearThreadParams.__sched_priority = 50;
+//
+	struct sched_param carThreadParams, readButtonThreadParams, ledThreadParams;
+	//
 	carThreadParams.__sched_priority = 50;
 	readButtonThreadParams.__sched_priority = 50;
 	ledThreadParams.__sched_priority = 50;
-	pthread_setschedparam(gearThread, SCHED_FIFO, &gearThreadParams);
 	pthread_setschedparam(carThread, SCHED_FIFO, &carThreadParams);
 	pthread_setschedparam(readButtonThread, SCHED_FIFO, &readButtonThreadParams);
 	pthread_setschedparam(ledThread, SCHED_FIFO, &ledThreadParams);
@@ -202,12 +175,10 @@ int main(int argc, char *argv[])
 	sleep(20);
 	carDestroy(&volvo);
 	
-	pthread_cancel(gearThread);
-	pthread_cancel(carThread);
-	pthread_cancel(readButtonThread);
-	pthread_cancel(ledThread);
-	
-	pthread_join(gearThread, NULL);
+//	pthread_cancel(carThread);
+//	pthread_cancel(readButtonThread);
+//	pthread_cancel(ledThread);
+//
 	pthread_join(carThread, NULL);
 	pthread_join(readButtonThread, NULL);
 	pthread_join(ledThread, NULL);
