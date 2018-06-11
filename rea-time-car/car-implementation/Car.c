@@ -89,24 +89,46 @@ void incrementGear(Car* car)
 	case (gs25):
 		car->gearState = gs50;
 		carSetSpeed(car, 50);
+		carSetForward(car);
 		break;
 
 	case (gs50):
 		car->gearState = gs75;
 		carSetSpeed(car, 75);
+		carSetForward(car);
 		break;
 
 	case (gs75):
 		car->gearState = gs100;
 		carSetSpeed(car, 100);
+		carSetForward(car);
 		break;
 
 	case (gs100):
 		car->gearState = Neutral;
 		carSetSpeed(car, 0);
+		carSetForward(car);
 		break;
 		
 	case (ReverseGear):
+		car->gearState = Neutral;
+		carSetSpeed(car, 0);
+		carSetForward(car);
+		break;
+		
+	case (Stop):
+		car->gearState = Neutral;
+		carSetSpeed(car, 0);
+		carSetForward(car);
+		break;
+		
+	case (LeftTurn):
+		car->gearState = gs25;
+		carSetSpeed(car, 25);
+		carSetForward(car);
+		break;
+		
+	case (RightTurn):
 		car->gearState = gs25;
 		carSetSpeed(car, 25);
 		carSetForward(car);
@@ -118,4 +140,21 @@ void incrementGear(Car* car)
 		carSetForward(car);
 		break;
 	}
+}
+
+void carTurnLeft(Car* car)
+{
+	carSetForward(car);
+	car->gearState = LeftTurn;
+	car->speed = 25;
+	engineSetSpeed(&(car->engineLeft), car->speed);
+	engineSetSpeed(&(car->engineRight), 0);
+}
+void carTurnRight(Car* car)
+{
+	carSetForward(car);
+	car->gearState = RightTurn;
+	car->speed = 25;
+	engineSetSpeed(&(car->engineLeft), 0);
+	engineSetSpeed(&(car->engineRight), car->speed);
 }

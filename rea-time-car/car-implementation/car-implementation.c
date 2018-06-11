@@ -28,23 +28,35 @@ pthread_t ledThread;
 pthread_t readButtonThread;
 pthread_t gearThread;
 
+//Mutex
+pthread_mutex_t volvoMutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Variables
 Car volvo;
 Button stopButton, turnLeftButton, turnRightButton, gearButton;
 Led stopLed, turnLeftLed, turnRightLed, greenLed;
+volatile int runningFlag = 1;
 
 void* carTask(void* args)
 {
+	struct timespec waitTimeSpec,waitTime2, remainingTime, remainingTime2;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
+	waitTime2.tv_nsec = MS_IN_NANO * 1;
+	
 	while (1)
 	{
+		pthread_mutex_lock(&volvoMutex);
 		carRun(&volvo);
+		//clock_nanosleep(CLOCK_REALTIME, 0, &waitTime2, &remainingTime2);
+		pthread_mutex_unlock(&volvoMutex);
+		//clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
 void* readButtonTask(void* args)
 {
 	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
 	
 	mqd_t btnQueue;
 	struct mq_attr btnAttr;
@@ -67,7 +79,7 @@ void* readButtonTask(void* args)
 		if (buttonPositiveFlancDetection(&stopButton))
 		{
 			sprintf(buffer, "%s", "stop");
-			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 10) < 0)
 			{
 				printf("Buttontask: stop button couldn't send the message, Error: %s", strerror(errno));
 				mq_close(btnQueue);
@@ -76,20 +88,56 @@ void* readButtonTask(void* args)
 		}
 		if (buttonPositiveFlancDetection(&turnLeftButton))
 		{
-
+			sprintf(buffer, "%s", "left");
+			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+			{
+				printf("Buttontask: left button couldn't send the message, Error: %s", strerror(errno));
+				mq_close(btnQueue);
+				exit(1);
+			}
 		}
 		if (buttonPositiveFlancDetection(&turnRightButton))
 		{
-
+			sprintf(buffer, "%s", "right");
+			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+			{
+				printf("Buttontask: right button couldn't send the message, Error: %s", strerror(errno));
+				mq_close(btnQueue);
+				exit(1);
+			}
 		}
 		if (buttonPositiveFlancDetection(&gearButton))
 		{
-			sprintf(buffer, "%s", "gear");
-			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+			clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
+			volatile int i = 1;
+			while (!buttonReadValue(&gearButton))
 			{
-				printf("Buttontask: gear button couldn't send the message, Error: %s", strerror(errno));
-				mq_close(btnQueue);
-				exit(1);
+				if (buttonNegativeFlancDetection(&gearButton))
+				{
+					break;
+				}
+				sleep(1);
+				if (i++ >= 3)
+				{
+					sprintf(buffer, "%s", "reverse");
+					if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+					{
+						printf("Buttontask: gear button(reverse) couldn't send the message, Error: %s", strerror(errno));
+						mq_close(btnQueue);
+						exit(1);
+					}
+					break;
+				}
+			}
+			if (i < 3)
+			{
+				sprintf(buffer, "%s", "gear");
+				if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
+				{
+					printf("Buttontask: gear button couldn't send the message, Error: %s", strerror(errno));
+					mq_close(btnQueue);
+					exit(1);
+				}
 			}
 		}
 
@@ -103,13 +151,18 @@ void* ledTask(void* args)
 	struct timespec waitTimeSpec, remainingWaitTime;
 	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
 	blinkTimeSpec.tv_nsec = SECOND_IN_NANO/2;
-	
+	GearState ledGearState;
 	double degree = 0;
 	double sinValue;
+	size_t reverseLedFlag = 1;
 
 	while (1)
 	{
-		switch (volvo.gearState)
+		pthread_mutex_lock(&volvoMutex);
+		ledGearState = volvo.gearState;
+		pthread_mutex_unlock(&volvoMutex);
+		
+		switch (ledGearState)
 		{
 		case (Neutral):
 			ledTurnOff(&stopLed);
@@ -165,11 +218,43 @@ void* ledTask(void* args)
 			ledTurnOff(&greenLed);	
 			ledTurnOff(&stopLed);
 			blinkTimeSpec.tv_nsec = 500000000;
+			if (reverseLedFlag)
+			{
+				ledTurnOn(&turnLeftLed);
+				ledTurnOn(&turnRightLed);
+				reverseLedFlag = 0;
+			}
+			else
+			{
+				ledTurnOff(&turnLeftLed);
+				ledTurnOff(&turnRightLed);
+				reverseLedFlag = 1;
+			}
+				
+			
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
+			
+		case (LeftTurn):
+			ledTurnOff(&greenLed);	
+			ledTurnOff(&stopLed);
+			ledTurnOff(&turnRightLed);
+			blinkTimeSpec.tv_nsec = 250000000;
 			ledToggle(&turnLeftLed);
+			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
+			break;
+			
+		case (RightTurn):
+			ledTurnOff(&greenLed);	
+			ledTurnOff(&stopLed);
+			ledTurnOff(&turnLeftLed);
+			blinkTimeSpec.tv_nsec = 250000000;
 			ledToggle(&turnRightLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 		}
+		
+		
 
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingWaitTime);
 	}
@@ -177,20 +262,22 @@ void* ledTask(void* args)
 
 void* gearTask(void* args)
 {
+	printf("Geartask: innan nagot\n");
 	struct timespec waitTimeSpec, remainingTime;
 	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
 	mqd_t gearQueue;
-	struct mq_attr gearAttr;
+	struct mq_attr gearAttr, gearAttr2;
+	char spam[MAX_MSG_SIZE+1];
 	char buffer[MAX_MSG_SIZE + 1];
 	unsigned int prio;
 	
 	gearAttr.mq_flags = 0;
 	gearAttr.mq_maxmsg = MAX_MSG_NUM;
 	gearAttr.mq_msgsize = MAX_MSG_SIZE;
-	gearAttr.mq_curmsgs = 0;
+	//gearAttr.mq_curmsgs = 0;
 	
 	gearQueue = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, 0777, &gearAttr);
-	
+	//printf("Geartask: gearqueue skapad\n");
 	if (gearQueue == -1)
 	{
 		printf("gearTask couldn't create the queue,  Error: %s", strerror(errno));
@@ -198,26 +285,68 @@ void* gearTask(void* args)
 	}
 	while (1)
 	{
+		//printf("Geartask: innan mq_recieve\n");
 		if (mq_receive(gearQueue, buffer, MAX_MSG_SIZE, &prio) < 0)
 		{
 			printf("Geartask: couldn't recieve the message, Error: %s", strerror(errno));
 			mq_close(gearQueue);
 			exit(1);
 		}
-		if (strcmp(buffer, "gear") == 0)
-		{
-			incrementGear(&volvo);
-		}
 		if (strcmp(buffer, "stop") == 0)
 		{
+//			if (volvo.gearState == Stop)
+//			{
+//				runningFlag = 0;
+//				break;
+//			}
+			pthread_mutex_lock(&volvoMutex);
 			carStop(&volvo);
+			pthread_mutex_unlock(&volvoMutex);
+//			mq_getattr(gearQueue, &gearAttr2);
+//			printf("CurrentMessages: %ld\n", gearAttr2.mq_curmsgs);
+//			while (gearAttr2.mq_curmsgs > 0) 
+//			{
+//				mq_receive(gearQueue, spam, MAX_MSG_SIZE, &prio);
+//				printf("CurrentMessages: %ld\n", gearAttr2.mq_curmsgs);
+//				mq_getattr(gearQueue, &gearAttr2);
+//			}
 		}
+		else if (strcmp(buffer, "gear") == 0)
+		{
+			pthread_mutex_lock(&volvoMutex);
+			incrementGear(&volvo);
+			pthread_mutex_unlock(&volvoMutex);
+		}
+		
+		else if (strcmp(buffer, "reverse") == 0)
+		{
+			pthread_mutex_lock(&volvoMutex);
+			carSetReverse(&volvo);
+			pthread_mutex_unlock(&volvoMutex);
+		}
+		
+		else if (strcmp(buffer, "left") == 0)
+		{
+			pthread_mutex_lock(&volvoMutex);
+			carTurnLeft(&volvo);
+			pthread_mutex_unlock(&volvoMutex);
+		}
+		
+		else if (strcmp(buffer, "right") == 0)
+		{
+			pthread_mutex_lock(&volvoMutex);
+			carTurnRight(&volvo);
+			pthread_mutex_unlock(&volvoMutex);
+		}
+		
+		//printf("Geartask: vid sleep\n");
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
 int main(int argc, char *argv[])
 {
+	printf("Start");
 	// Init
 	gpioSetup();
 	carInit(&volvo);
@@ -263,10 +392,10 @@ int main(int argc, char *argv[])
 	//Thread Params
 	struct sched_param carThreadParams, readButtonThreadParams, ledThreadParams, gearThreadParams;
 	
-	carThreadParams.__sched_priority = 50;
-	readButtonThreadParams.__sched_priority = 50;
-	ledThreadParams.__sched_priority = 50;
-	gearThreadParams.__sched_priority = 40;
+	carThreadParams.__sched_priority = 20;
+	readButtonThreadParams.__sched_priority = 60;
+	ledThreadParams.__sched_priority = 30;
+	gearThreadParams.__sched_priority = 70;
 	pthread_setschedparam(carThread, SCHED_FIFO, &carThreadParams);
 	pthread_setschedparam(readButtonThread, SCHED_FIFO, &readButtonThreadParams);
 	pthread_setschedparam(ledThread, SCHED_FIFO, &ledThreadParams);
@@ -274,13 +403,32 @@ int main(int argc, char *argv[])
 
 	// Run
 	sleep(20);
-	carDestroy(&volvo);
+	runningFlag = 0;
 	
 	//Join
 	pthread_join(carThread, NULL);
 	pthread_join(readButtonThread, NULL);
 	pthread_join(ledThread, NULL);
 	pthread_join(gearThread, NULL);
+	
+	carDestroy(&volvo);
+	
+	buttonDestroy(&stopButton);
+	buttonDestroy(&turnLeftButton);
+	buttonDestroy(&turnRightButton);
+	buttonDestroy(&gearButton);
+	
+	ledDestroy(&stopLed);
+	ledDestroy(&turnLeftLed);
+	ledDestroy(&turnRightLed);
+	ledDestroy(&greenLed);
+	
+
+
+	
+	mq_unlink(QUEUE_NAME);
+	
+	pthread_mutex_destroy(&volvoMutex);
 	
 	fflush(stdout); /* <============== Put a breakpoint here */
 	return 0;

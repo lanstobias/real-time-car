@@ -7,9 +7,7 @@
 typedef enum CarDirection
 {
 	CarForward,
-	CarReverse,
-	CarLeft,
-	CarRight
+	CarReverse
 }CarDirection;
 typedef enum GearState
 {
@@ -19,7 +17,9 @@ typedef enum GearState
 	gs75,
 	gs100,
 	Stop,
-	ReverseGear
+	ReverseGear,
+	LeftTurn,
+	RightTurn
 } GearState;
 
 typedef struct Car
@@ -43,5 +43,7 @@ void carSetSpeed(Car* car, int speed);
 void carSetEnginesToCarDirection(Car* car);
 void carSetEnginesSpeed(Car* car);
 void incrementGear(Car* car);
+void carTurnLeft(Car* car);
+void carTurnRight(Car* car);
 #endif
 
