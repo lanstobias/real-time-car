@@ -19,14 +19,18 @@
 #define MAX_MSG_NUM 30
 
 // Function prototypes
+void initializeButtons();
+void initializeLeds();
+void initializeThreads( struct sched_param* carThreadParams, struct sched_param* readButtonThreadParams,
+						struct sched_param* ledThreadParams, struct sched_param* gearThreadParams);
 double degreeToRadian(double degreeValue);
 double sinValueToPercent(double sinValue);
+void joinThreads();
+void turnOffAndDestroyLeds();
+void destroyButtons();
 
 // Threads
-pthread_t carThread;
-pthread_t ledThread;
-pthread_t readButtonThread;
-pthread_t gearThread;
+pthread_t carThread, ledThread, readButtonThread, gearThread;
 
 //Mutex
 pthread_mutex_t volvoMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -39,24 +43,21 @@ volatile int runningFlag = 1;
 
 void* carTask(void* args)
 {
-	struct timespec waitTimeSpec,waitTime2, remainingTime, remainingTime2;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
-	waitTime2.tv_nsec = MS_IN_NANO * 1;
-	
-	while (1)
+	while (runningFlag)
 	{
 		pthread_mutex_lock(&volvoMutex);
 		carRun(&volvo);
-		//clock_nanosleep(CLOCK_REALTIME, 0, &waitTime2, &remainingTime2);
 		pthread_mutex_unlock(&volvoMutex);
-		//clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
 void* readButtonTask(void* args)
 {
-	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
+	struct timespec waitTimeSpec, readButtonDelay, remainingTime, readButtonRemainingTime;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 1;
+	readButtonDelay.tv_nsec = MS_IN_NANO * 10;
+	
+	volatile const size_t REVERSE_DELAY = 2650;
 	
 	mqd_t btnQueue;
 	struct mq_attr btnAttr;
@@ -74,7 +75,7 @@ void* readButtonTask(void* args)
 		exit(1);
 	}
 
-	while (1)
+	while (runningFlag)
 	{
 		if (buttonPositiveFlancDetection(&stopButton))
 		{
@@ -91,7 +92,7 @@ void* readButtonTask(void* args)
 			sprintf(buffer, "%s", "left");
 			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
 			{
-				printf("Buttontask: left button couldn't send the message, Error: %s", strerror(errno));
+				printf("Buttontask: turn left button couldn't send the message, Error: %s", strerror(errno));
 				mq_close(btnQueue);
 				exit(1);
 			}
@@ -101,7 +102,7 @@ void* readButtonTask(void* args)
 			sprintf(buffer, "%s", "right");
 			if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
 			{
-				printf("Buttontask: right button couldn't send the message, Error: %s", strerror(errno));
+				printf("Buttontask: turn right button couldn't send the message, Error: %s", strerror(errno));
 				mq_close(btnQueue);
 				exit(1);
 			}
@@ -116,8 +117,8 @@ void* readButtonTask(void* args)
 				{
 					break;
 				}
-				sleep(1);
-				if (i++ >= 3)
+				clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
+				if (i++ >= REVERSE_DELAY)
 				{
 					sprintf(buffer, "%s", "reverse");
 					if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
@@ -129,7 +130,7 @@ void* readButtonTask(void* args)
 					break;
 				}
 			}
-			if (i < 3)
+			if (i < REVERSE_DELAY)
 			{
 				sprintf(buffer, "%s", "gear");
 				if (mq_send(btnQueue, buffer, MAX_MSG_SIZE, 0) < 0)
@@ -140,8 +141,8 @@ void* readButtonTask(void* args)
 				}
 			}
 		}
-
-		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
+		
+		clock_nanosleep(CLOCK_REALTIME, 0, &readButtonDelay, &readButtonRemainingTime);
 	}
 }
 
@@ -151,12 +152,13 @@ void* ledTask(void* args)
 	struct timespec waitTimeSpec, remainingWaitTime;
 	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
 	blinkTimeSpec.tv_nsec = SECOND_IN_NANO/2;
+	
 	GearState ledGearState;
-	double degree = 0;
-	double sinValue;
+	volatile double degree = 0;
+	volatile double sinValue;
 	size_t reverseLedFlag = 1;
 
-	while (1)
+	while (runningFlag)
 	{
 		pthread_mutex_lock(&volvoMutex);
 		ledGearState = volvo.gearState;
@@ -182,25 +184,25 @@ void* ledTask(void* args)
 			ledTurnOff(&stopLed);
 			ledTurnOff(&turnLeftLed);
 			ledTurnOff(&turnRightLed);
-			blinkTimeSpec.tv_nsec = 250000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 4;
 			ledToggle(&greenLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 
 		case (gs50):
-			blinkTimeSpec.tv_nsec = 125000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 8;
 			ledToggle(&greenLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 
 		case (gs75):
-			blinkTimeSpec.tv_nsec = 50000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 20;
 			ledToggle(&greenLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 
 		case (gs100):
-			blinkTimeSpec.tv_nsec = 25000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 40;
 			ledToggle(&greenLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
@@ -209,7 +211,7 @@ void* ledTask(void* args)
 			ledTurnOff(&turnLeftLed);
 			ledTurnOff(&turnRightLed);
 			ledTurnOff(&greenLed);
-			blinkTimeSpec.tv_nsec = 500000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 2;
 			ledToggle(&stopLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
@@ -217,7 +219,7 @@ void* ledTask(void* args)
 		case (ReverseGear):
 			ledTurnOff(&greenLed);	
 			ledTurnOff(&stopLed);
-			blinkTimeSpec.tv_nsec = 500000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 2;
 			if (reverseLedFlag)
 			{
 				ledTurnOn(&turnLeftLed);
@@ -230,7 +232,6 @@ void* ledTask(void* args)
 				ledTurnOff(&turnRightLed);
 				reverseLedFlag = 1;
 			}
-				
 			
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
@@ -239,7 +240,7 @@ void* ledTask(void* args)
 			ledTurnOff(&greenLed);	
 			ledTurnOff(&stopLed);
 			ledTurnOff(&turnRightLed);
-			blinkTimeSpec.tv_nsec = 250000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 4;
 			ledToggle(&turnLeftLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
@@ -248,25 +249,23 @@ void* ledTask(void* args)
 			ledTurnOff(&greenLed);	
 			ledTurnOff(&stopLed);
 			ledTurnOff(&turnLeftLed);
-			blinkTimeSpec.tv_nsec = 250000000;
+			blinkTimeSpec.tv_nsec = SECOND_IN_NANO / 4;
 			ledToggle(&turnRightLed);
 			clock_nanosleep(CLOCK_REALTIME, 0, &blinkTimeSpec, &remainingTime);
 			break;
 		}
 		
-		
-
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingWaitTime);
 	}
 }
 
 void* gearTask(void* args)
 {
-	printf("Geartask: innan nagot\n");
 	struct timespec waitTimeSpec, remainingTime;
-	waitTimeSpec.tv_nsec = MS_IN_NANO * 100;
+	waitTimeSpec.tv_nsec = MS_IN_NANO * 10;
+	
 	mqd_t gearQueue;
-	struct mq_attr gearAttr, gearAttr2;
+	struct mq_attr gearAttr, tempGearAttr;
 	char spam[MAX_MSG_SIZE+1];
 	char buffer[MAX_MSG_SIZE + 1];
 	unsigned int prio;
@@ -274,18 +273,17 @@ void* gearTask(void* args)
 	gearAttr.mq_flags = 0;
 	gearAttr.mq_maxmsg = MAX_MSG_NUM;
 	gearAttr.mq_msgsize = MAX_MSG_SIZE;
-	//gearAttr.mq_curmsgs = 0;
+	gearAttr.mq_curmsgs = 0;
 	
 	gearQueue = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, 0777, &gearAttr);
-	//printf("Geartask: gearqueue skapad\n");
 	if (gearQueue == -1)
 	{
 		printf("gearTask couldn't create the queue,  Error: %s", strerror(errno));
 		exit(1);
 	}
-	while (1)
+	
+	while (runningFlag)
 	{
-		//printf("Geartask: innan mq_recieve\n");
 		if (mq_receive(gearQueue, buffer, MAX_MSG_SIZE, &prio) < 0)
 		{
 			printf("Geartask: couldn't recieve the message, Error: %s", strerror(errno));
@@ -294,22 +292,24 @@ void* gearTask(void* args)
 		}
 		if (strcmp(buffer, "stop") == 0)
 		{
-//			if (volvo.gearState == Stop)
-//			{
-//				runningFlag = 0;
-//				break;
-//			}
+			//Stop car or terminate program, depending on the current state
 			pthread_mutex_lock(&volvoMutex);
+			if (volvo.gearState == Stop)
+			{
+				runningFlag = 0;
+				pthread_mutex_unlock(&volvoMutex);
+				break;
+			}
 			carStop(&volvo);
 			pthread_mutex_unlock(&volvoMutex);
-//			mq_getattr(gearQueue, &gearAttr2);
-//			printf("CurrentMessages: %ld\n", gearAttr2.mq_curmsgs);
-//			while (gearAttr2.mq_curmsgs > 0) 
-//			{
-//				mq_receive(gearQueue, spam, MAX_MSG_SIZE, &prio);
-//				printf("CurrentMessages: %ld\n", gearAttr2.mq_curmsgs);
-//				mq_getattr(gearQueue, &gearAttr2);
-//			}
+			
+			//Clear the queue after stop command
+			mq_getattr(gearQueue, &tempGearAttr);
+			while (tempGearAttr.mq_curmsgs > 0) 
+			{
+				mq_receive(gearQueue, spam, MAX_MSG_SIZE, &prio);
+				mq_getattr(gearQueue, &tempGearAttr);
+			}
 		}
 		else if (strcmp(buffer, "gear") == 0)
 		{
@@ -339,95 +339,33 @@ void* gearTask(void* args)
 			pthread_mutex_unlock(&volvoMutex);
 		}
 		
-		//printf("Geartask: vid sleep\n");
 		clock_nanosleep(CLOCK_REALTIME, 0, &waitTimeSpec, &remainingTime);
 	}
 }
 
 int main(int argc, char *argv[])
 {
-	printf("Start");
-	// Init
+	// Initialize modules
 	gpioSetup();
 	carInit(&volvo);
-
-	buttonInit(&stopButton, _4);
-	buttonInit(&turnLeftButton, _22);
-	buttonInit(&turnRightButton, _17);
-	buttonInit(&gearButton, _27);
+	initializeButtons();
+	initializeLeds();
 	
-	ledInit(&stopLed, _19);
-	ledInit(&turnLeftLed, _21);
-	ledInit(&turnRightLed, _13);
-	ledInit(&greenLed, _26);
-
-	// Create threads
-	
-	if (pthread_create(&carThread, NULL, carTask, NULL) < 0)
-	{
-		printf("Could not create car thread. Error: %s", strerror(errno));
-		exit(1);
-	}
-	if (pthread_create(&gearThread, NULL, gearTask, NULL) < 0)
-	{
-		printf("Could not create gear thread. Error: %s", strerror(errno));
-		exit(1);
-	}
-
-	if (pthread_create(&readButtonThread, NULL, readButtonTask, NULL) < 0)
-	{
-		printf("Could not create read button thread. Error: %s", strerror(errno));
-		exit(1);
-	}
-
-	if 	(pthread_create(&ledThread, NULL, ledTask, NULL)<0)
-	{
-		printf("Could not create led thread. Error: %s", strerror(errno));
-		exit(1);
-	}
-	
-
-	
-	
-	//Thread Params
+	//Initialize threads
 	struct sched_param carThreadParams, readButtonThreadParams, ledThreadParams, gearThreadParams;
+	initializeThreads(&carThreadParams, &readButtonThreadParams, &ledThreadParams, &gearThreadParams);
 	
-	carThreadParams.__sched_priority = 20;
-	readButtonThreadParams.__sched_priority = 60;
-	ledThreadParams.__sched_priority = 30;
-	gearThreadParams.__sched_priority = 70;
-	pthread_setschedparam(carThread, SCHED_FIFO, &carThreadParams);
-	pthread_setschedparam(readButtonThread, SCHED_FIFO, &readButtonThreadParams);
-	pthread_setschedparam(ledThread, SCHED_FIFO, &ledThreadParams);
-	pthread_setschedparam(gearThread, SCHED_FIFO, &ledThreadParams);
+	while(runningFlag) //Runningflag is set to 0 when stop is pressed twice
+	{
+		// Run
+	}
 
-	// Run
-	sleep(20);
-	runningFlag = 0;
-	
-	//Join
-	pthread_join(carThread, NULL);
-	pthread_join(readButtonThread, NULL);
-	pthread_join(ledThread, NULL);
-	pthread_join(gearThread, NULL);
-	
+	//Destroy program
 	carDestroy(&volvo);
-	
-	buttonDestroy(&stopButton);
-	buttonDestroy(&turnLeftButton);
-	buttonDestroy(&turnRightButton);
-	buttonDestroy(&gearButton);
-	
-	ledDestroy(&stopLed);
-	ledDestroy(&turnLeftLed);
-	ledDestroy(&turnRightLed);
-	ledDestroy(&greenLed);
-	
-
-
-	
+	joinThreads();
+	destroyButtons();
+	turnOffAndDestroyLeds();
 	mq_unlink(QUEUE_NAME);
-	
 	pthread_mutex_destroy(&volvoMutex);
 	
 	fflush(stdout); /* <============== Put a breakpoint here */
@@ -442,4 +380,84 @@ double degreeToRadian(double degreeValue)
 double sinValueToPercent(double sinValue)
 {
 	return (fabs(sinValue * 100));
+}
+
+void initializeButtons()
+{
+	buttonInit(&stopButton, _4);
+	buttonInit(&turnLeftButton, _22);
+	buttonInit(&turnRightButton, _17);
+	buttonInit(&gearButton, _27);
+}
+
+void initializeLeds()
+{
+	ledInit(&stopLed, _19);
+	ledInit(&turnLeftLed, _21);
+	ledInit(&turnRightLed, _13);
+	ledInit(&greenLed, _26);
+}
+
+void initializeThreads(struct sched_param* carThreadParams, struct sched_param* readButtonThreadParams,
+					   struct sched_param* ledThreadParams, struct sched_param* gearThreadParams)
+{
+	// Create threads
+	if(pthread_create(&carThread, NULL, carTask, NULL) < 0)
+	{
+		printf("Could not create car thread. Error: %s", strerror(errno));
+		exit(1);
+	}
+	if (pthread_create(&gearThread, NULL, gearTask, NULL) < 0)
+	{
+		printf("Could not create gear thread. Error: %s", strerror(errno));
+		exit(1);
+	}
+	if (pthread_create(&readButtonThread, NULL, readButtonTask, NULL) < 0)
+	{
+		printf("Could not create read button thread. Error: %s", strerror(errno));
+		exit(1);
+	}
+	if (pthread_create(&ledThread, NULL, ledTask, NULL) < 0)
+	{
+		printf("Could not create led thread. Error: %s", strerror(errno));
+		exit(1);
+	}
+	
+	//Thread Params
+	carThreadParams->__sched_priority = 20;
+	readButtonThreadParams->__sched_priority = 70;
+	ledThreadParams->__sched_priority = 30;
+	gearThreadParams->__sched_priority = 60;
+	
+	pthread_setschedparam(carThread, SCHED_FIFO, carThreadParams);
+	pthread_setschedparam(readButtonThread, SCHED_FIFO, readButtonThreadParams);
+	pthread_setschedparam(ledThread, SCHED_FIFO, ledThreadParams);
+	pthread_setschedparam(gearThread, SCHED_FIFO, ledThreadParams);
+}
+void turnOffAndDestroyLeds()
+{
+	ledTurnOff(&stopLed);
+	ledTurnOff(&turnLeftLed);
+	ledTurnOff(&turnRightLed);
+	ledTurnOff(&greenLed);
+	ledDestroy(&stopLed);
+	ledDestroy(&turnLeftLed);
+	ledDestroy(&turnRightLed);
+	ledDestroy(&greenLed);
+}
+
+void destroyButtons()
+{
+	buttonDestroy(&stopButton);
+	buttonDestroy(&turnLeftButton);
+	buttonDestroy(&turnRightButton);
+	buttonDestroy(&gearButton);
+}
+
+void joinThreads()
+{
+	pthread_join(carThread, NULL);
+	pthread_join(readButtonThread, NULL);
+	pthread_join(ledThread, NULL);
+	pthread_join(gearThread, NULL);
 }

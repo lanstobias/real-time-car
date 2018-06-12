@@ -29,7 +29,6 @@ typedef struct Car
 	GearState gearState;
 	int speed;
 	CarDirection carDirection;
-	
 }Car;
 
 void carInit(Car* car);
